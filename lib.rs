@@ -13,7 +13,7 @@ use std::io::{self, Read};
 use std::fs::File;
 #[cfg(any(target_os = "windows", target_vendor = "apple", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))]
 use std::os::raw::c_char;
-#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "haiku")))]
+#[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "android", target_os = "haiku")))]
 use std::os::raw::{c_int, c_double};
 
 #[cfg(any(target_vendor = "apple", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))]
@@ -26,7 +26,7 @@ use std::ptr::null_mut;
 use libc::timeval;
 #[cfg(any(target_os = "solaris", target_os = "illumos"))]
 use std::time::SystemTime;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 use std::collections::HashMap;
 
 #[cfg(any(target_os = "solaris", target_os = "illumos"))]
@@ -371,7 +371,7 @@ extern "C" {
     #[cfg(any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))]
     fn get_mem_info_bsd(mi: &mut MemInfo) ->i32;
 
-    #[cfg(any(target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "haiku"))]
+    #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple", target_os = "windows", target_os = "haiku"))]
     fn get_disk_info() -> DiskInfo;
     #[cfg(any(target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))]
     fn get_disk_info_bsd(di: &mut DiskInfo) -> i32;
@@ -382,7 +382,7 @@ extern "C" {
 ///
 /// Such as "Linux", "Darwin", "Windows".
 pub fn os_type() -> Result<String, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     {
         let mut s = String::new();
         File::open("/proc/sys/kernel/ostype")?.read_to_string(&mut s)?;
@@ -418,7 +418,7 @@ pub fn os_type() -> Result<String, Error> {
     {
         Ok("haiku".to_string())
     }
-    #[cfg(not(any(target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "solaris", target_os = "illumos", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "android", target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "solaris", target_os = "illumos", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -428,7 +428,7 @@ pub fn os_type() -> Result<String, Error> {
 ///
 /// Such as "3.19.0-gentoo"
 pub fn os_release() -> Result<String, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         let mut s = String::new();
         File::open("/proc/sys/kernel/osrelease")?.read_to_string(&mut s)?;
@@ -463,7 +463,7 @@ pub fn os_release() -> Result<String, Error> {
             Some(release) => Ok(release),
         }
     }
-    #[cfg(not(any(target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "solaris", target_os = "illumos", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "android", target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "solaris", target_os = "illumos", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -567,7 +567,7 @@ pub fn cpu_speed() -> Result<u64, Error> {
     {
        Ok(kstat::cpu_mhz()?)
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         // /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_cur_freq
         let mut s = String::new();
@@ -597,7 +597,7 @@ pub fn cpu_speed() -> Result<u64, Error> {
 	    _ => Ok(res),
 	}
     }
-    #[cfg(not(any(target_os = "solaris", target_os = "illumos", target_os = "linux", all(target_vendor = "apple", not(any(target_arch = "aarch64", target_arch = "arm"))), target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "solaris", target_os = "illumos", target_os = "linux", target_os = "android", all(target_vendor = "apple", not(any(target_arch = "aarch64", target_arch = "arm"))), target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -607,7 +607,7 @@ pub fn cpu_speed() -> Result<u64, Error> {
 ///
 /// Notice, on windows, one/five/fifteen of the LoadAvg returned are the current load.
 pub fn loadavg() -> Result<LoadAvg, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         let mut s = String::new();
         File::open("/proc/loadavg")?.read_to_string(&mut s)?;
@@ -638,7 +638,7 @@ pub fn loadavg() -> Result<LoadAvg, Error> {
     {
         Ok(unsafe { get_loadavg() })
     }
-    #[cfg(not(any(target_os = "linux", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -650,7 +650,7 @@ pub fn proc_total() -> Result<u64, Error> {
     {
         Ok(kstat::nproc()?)
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         let mut s = String::new();
         File::open("/proc/loadavg")?.read_to_string(&mut s)?;
@@ -672,7 +672,7 @@ pub fn proc_total() -> Result<u64, Error> {
 	    _ => Ok(res),
 	}
     }
-    #[cfg(not(any(target_os = "linux", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -692,7 +692,7 @@ fn pagesize() -> Result<u32, Error> {
 ///
 /// On Mac OS X and Windows, the buffers and cached variables of the MemInfo returned are zero.
 pub fn mem_info() -> Result<MemInfo, Error> {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         let mut s = String::new();
         File::open("/proc/meminfo")?.read_to_string(&mut s)?;
@@ -757,7 +757,7 @@ pub fn mem_info() -> Result<MemInfo, Error> {
 	    _ => Err(Error::Unknown),
 	}
     }
-    #[cfg(not(any(target_os = "linux", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "solaris", target_os = "illumos", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -767,7 +767,7 @@ pub fn mem_info() -> Result<MemInfo, Error> {
 ///
 /// Notice, it just calculate current disk on Windows.
 pub fn disk_info() -> Result<DiskInfo, Error> {
-    #[cfg(any(target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "haiku"))]
+    #[cfg(any(target_os = "linux", target_os = "android", target_vendor = "apple", target_os = "windows", target_os = "haiku"))]
     {
         Ok(unsafe { get_disk_info() })
     }
@@ -781,7 +781,7 @@ pub fn disk_info() -> Result<DiskInfo, Error> {
 	    _ => Err(Error::Unknown),
 	}
     }
-    #[cfg(not(any(target_os = "linux", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_vendor = "apple", target_os = "windows", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "haiku")))]
     {
         Err(Error::UnsupportedSystem)
     }
@@ -819,7 +819,7 @@ pub fn boottime() -> Result<timeval, Error> {
         tv_usec: 0
     };
 
-    #[cfg(any(target_os = "linux", target_os="android"))]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     {
         let mut s = String::new();
         File::open("/proc/uptime")?.read_to_string(&mut s)?;
